@@ -1,0 +1,28 @@
+from swift.common.utils import get_logger
+from swift.common.swob import Request, Response
+{% if use_subrequest %}
+from swift.common.utils import make_subrequest
+{% endif %}
+
+class {{ class_name }}:
+
+    def __init__(self, app, conf):
+        self.app = app
+        self.logger = get_logger(conf, log_route="{{ log_route }}")
+
+    def __call__(self, env, start_response):        
+{% if use_subrequest %}
+        req = Request(env)
+        subreq = make_subrequest(env, method="GET", path=req.path_info)
+        resp = subreq.get_response(self.app)
+{% endif %}        
+        return self.app(env, start_response)
+
+def filter_factory(global_conf, **local_conf):
+    conf = global_conf.copy()
+    conf.update(local_conf)
+
+    def {{ middleware_name }}_middleware_filter(app):
+        return {{ class_name }}(app, conf)
+
+    return {{ middleware_name }}_middleware_filter
